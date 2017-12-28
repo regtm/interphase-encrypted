@@ -44,6 +44,10 @@ $(abspath ../../../../components/drivers_nrf/clock/nrf_drv_clock.c) \
 $(abspath ../../../../components/libraries/util/app_util_platform.c) \
 $(abspath ../../../../components/drivers_nrf/common/nrf_drv_common.c) \
 $(abspath ../../../../components/drivers_nrf/rtc/nrf_drv_rtc.c) \
+$(abspath ../../../../components/properitary_rf/gzll/nrf_gzp.c) \
+$(abspath ../../../../components/properitary_rf/gzll/nrf_gzp_device.c) \
+$(abspath ../../../../components/drivers_nrf/hal/nrf_ecb.c) \
+$(abspath ../../../../components/drivers_nrf/hal/nrf_nvmc.c)
 
 
 #assembly files common to all targets
@@ -54,6 +58,7 @@ LIBS  = $(abspath ../../../../components/properitary_rf/gzll/gcc/gzll_gcc.a)
 
 #includes common to all targets
 INC_PATHS  = -I$(abspath ../../config)
+INC_PATHS += -I$(abspath ../../../config)
 INC_PATHS += -I$(abspath ../../../../components/device)
 INC_PATHS += -I$(abspath ../../../../components/toolchain/CMSIS/Include)
 INC_PATHS += -I$(abspath ../../../../components/properitary_rf/gzll)
@@ -65,6 +70,7 @@ INC_PATHS += -I$(abspath ../../../../components/toolchain)
 INC_PATHS += -I$(abspath ../../../../components/drivers_nrf/nrf_soc_nosd)
 INC_PATHS += -I$(abspath ../../../../components/drivers_nrf/common)
 INC_PATHS += -I$(abspath ../../../../components/drivers_nrf/clock)
+INC_PATHS += -I$(abspath ../../../../components/drivers_nrf/hal)
 INC_PATHS += -I$(abspath ../../../../components/libraries/util)
 INC_PATHS += -I$(abspath ../../../../components/drivers_nrf/config)
 INC_PATHS += -I$(abspath ../../../../components/drivers_nrf/rtc)
@@ -91,6 +97,8 @@ CFLAGS += -mfloat-abi=soft
 # keep every function in separate section. This will allow linker to dump unused functions
 CFLAGS += -ffunction-sections -fdata-sections -fno-strict-aliasing
 CFLAGS += -fno-builtin --short-enums 
+# Hack around non-GNU __attribute__ "at" in nrf_gzp_device.c
+CFLAGS += -D 'at(x)=section("x")'
 # keep every function in separate section. This will allow linker to dump unused functions
 LDFLAGS += -Xlinker -Map=$(LISTING_DIRECTORY)/$(OUTPUT_FILENAME).map
 LDFLAGS += -mthumb -mabi=aapcs -L $(TEMPLATE_PATH) -T$(LINKER_SCRIPT)

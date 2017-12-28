@@ -7,6 +7,7 @@
 #include "app_error.h"
 #include "nrf_delay.h"
 #include "nrf.h"
+#include "nrf_gzp.h"
 #include "nrf_gzll.h"
 
 #define MAX_TEST_DATA_BYTES     (15U)                /**< max number of test bytes to be used for tx and rx. */
@@ -22,7 +23,7 @@
 
 
 // Define payload length
-#define TX_PAYLOAD_LENGTH 3 ///< 3 byte payload length
+#define TX_PAYLOAD_LENGTH 4 ///< 4 byte payload length
 
 // ticks for inactive keyboard
 #define INACTIVE 100000
@@ -38,9 +39,7 @@
 
 
 // Data and acknowledgement payloads
-static uint8_t data_payload_left[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH];  ///< Placeholder for data payload received from host. 
-static uint8_t data_payload_right[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH];  ///< Placeholder for data payload received from host. 
-static uint8_t ack_payload[TX_PAYLOAD_LENGTH];                   ///< Payload to attach to ACK sent to device.
+static uint8_t data_payload[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH];  ///< Placeholder for data payload received from host.
 static uint8_t data_buffer[10];
 
 // Debug helper variables
@@ -66,7 +65,7 @@ void uart_error_handle(app_uart_evt_t * p_event)
 
 int main(void)
 {
-    uint32_t err_code;
+    uint32_t err_code, length;
     const app_uart_comm_params_t comm_params =
       {
           RX_PIN_NUMBER,
@@ -90,86 +89,92 @@ int main(void)
     // Initialize Gazell
     nrf_gzll_init(NRF_GZLL_MODE_HOST);
 
-    // Addressing
-    nrf_gzll_set_base_address_0(0x01020304);
-    nrf_gzll_set_base_address_1(0x05060708);
+    // Initialize Gazell Pairing library
+    gzp_init();
+    gzp_pairing_enable(true);
   
-    // Load data into TX queue
-    ack_payload[0] = 0x55;
-    nrf_gzll_add_packet_to_tx_fifo(0, data_payload_left, TX_PAYLOAD_LENGTH);
-    nrf_gzll_add_packet_to_tx_fifo(1, data_payload_left, TX_PAYLOAD_LENGTH);
-
     // Enable Gazell to start sending over the air
     nrf_gzll_enable();
 
     // main loop
     while (true)
     {
-        // detecting received packet from interupt, and unpacking
-        if (packet_received_left)
+        gzp_host_execute();
+
+        if (gzp_id_req_received())
         {
-            packet_received_left = false;
-
-            data_buffer[0] = ((data_payload_left[0] & 1<<3) ? 1:0) << 0 |
-                             ((data_payload_left[0] & 1<<4) ? 1:0) << 1 |
-                             ((data_payload_left[0] & 1<<5) ? 1:0) << 2 |
-                             ((data_payload_left[0] & 1<<6) ? 1:0) << 3 |
-                             ((data_payload_left[0] & 1<<7) ? 1:0) << 4;
-
-            data_buffer[2] = ((data_payload_left[1] & 1<<6) ? 1:0) << 0 |
-                             ((data_payload_left[1] & 1<<7) ? 1:0) << 1 |
-                             ((data_payload_left[0] & 1<<0) ? 1:0) << 2 |
-                             ((data_payload_left[0] & 1<<1) ? 1:0) << 3 |
-                             ((data_payload_left[0] & 1<<2) ? 1:0) << 4;
-
-            data_buffer[4] = ((data_payload_left[1] & 1<<1) ? 1:0) << 0 |
-                             ((data_payload_left[1] & 1<<2) ? 1:0) << 1 |
-                             ((data_payload_left[1] & 1<<3) ? 1:0) << 2 |
-                             ((data_payload_left[1] & 1<<4) ? 1:0) << 3 |
-                             ((data_payload_left[1] & 1<<5) ? 1:0) << 4;
-
-            data_buffer[6] = ((data_payload_left[2] & 1<<5) ? 1:0) << 1 |
-                             ((data_payload_left[2] & 1<<6) ? 1:0) << 2 |
-                             ((data_payload_left[2] & 1<<7) ? 1:0) << 3 |
-                             ((data_payload_left[1] & 1<<0) ? 1:0) << 4;
-
-            data_buffer[8] = ((data_payload_left[2] & 1<<1) ? 1:0) << 1 |
-                             ((data_payload_left[2] & 1<<2) ? 1:0) << 2 |
-                             ((data_payload_left[2] & 1<<3) ? 1:0) << 3 |
-                             ((data_payload_left[2] & 1<<4) ? 1:0) << 4;
+            // Accept all pairing requests received.
+            // The pairing library's proximity detection will (help) prevent
+            // unwanted devices from pairing.
+            gzp_id_req_grant();
         }
 
-        if (packet_received_right)
+        if (gzp_crypt_user_data_received())
         {
-            packet_received_right = false;
-            
-            data_buffer[1] = ((data_payload_right[0] & 1<<7) ? 1:0) << 0 |
-                             ((data_payload_right[0] & 1<<6) ? 1:0) << 1 |
-                             ((data_payload_right[0] & 1<<5) ? 1:0) << 2 |
-                             ((data_payload_right[0] & 1<<4) ? 1:0) << 3 |
-                             ((data_payload_right[0] & 1<<3) ? 1:0) << 4;
+            if (gzp_crypt_user_data_read(data_payload, (uint8_t*) &length))
+            {
+                // unpacking received packet
+                if (data_payload[0]) // left-hand
+                {
+                    data_buffer[0] = ((data_payload[1] & 1<<3) ? 1:0) << 0 |
+                                     ((data_payload[1] & 1<<4) ? 1:0) << 1 |
+                                     ((data_payload[1] & 1<<5) ? 1:0) << 2 |
+                                     ((data_payload[1] & 1<<6) ? 1:0) << 3 |
+                                     ((data_payload[1] & 1<<7) ? 1:0) << 4;
 
-            data_buffer[3] = ((data_payload_right[0] & 1<<2) ? 1:0) << 0 |
-                             ((data_payload_right[0] & 1<<1) ? 1:0) << 1 |
-                             ((data_payload_right[0] & 1<<0) ? 1:0) << 2 |
-                             ((data_payload_right[1] & 1<<7) ? 1:0) << 3 |
-                             ((data_payload_right[1] & 1<<6) ? 1:0) << 4;
+                    data_buffer[2] = ((data_payload[2] & 1<<6) ? 1:0) << 0 |
+                                     ((data_payload[2] & 1<<7) ? 1:0) << 1 |
+                                     ((data_payload[1] & 1<<0) ? 1:0) << 2 |
+                                     ((data_payload[1] & 1<<1) ? 1:0) << 3 |
+                                     ((data_payload[1] & 1<<2) ? 1:0) << 4;
 
-            data_buffer[5] = ((data_payload_right[1] & 1<<5) ? 1:0) << 0 |
-                             ((data_payload_right[1] & 1<<4) ? 1:0) << 1 |
-                             ((data_payload_right[1] & 1<<3) ? 1:0) << 2 |
-                             ((data_payload_right[1] & 1<<2) ? 1:0) << 3 |
-                             ((data_payload_right[1] & 1<<1) ? 1:0) << 4;
+                    data_buffer[4] = ((data_payload[2] & 1<<1) ? 1:0) << 0 |
+                                     ((data_payload[2] & 1<<2) ? 1:0) << 1 |
+                                     ((data_payload[2] & 1<<3) ? 1:0) << 2 |
+                                     ((data_payload[2] & 1<<4) ? 1:0) << 3 |
+                                     ((data_payload[2] & 1<<5) ? 1:0) << 4;
 
-            data_buffer[7] = ((data_payload_right[1] & 1<<0) ? 1:0) << 0 |
-                             ((data_payload_right[2] & 1<<7) ? 1:0) << 1 |
-                             ((data_payload_right[2] & 1<<6) ? 1:0) << 2 |
-                             ((data_payload_right[2] & 1<<5) ? 1:0) << 3;
+                    data_buffer[6] = ((data_payload[3] & 1<<5) ? 1:0) << 1 |
+                                     ((data_payload[3] & 1<<6) ? 1:0) << 2 |
+                                     ((data_payload[3] & 1<<7) ? 1:0) << 3 |
+                                     ((data_payload[2] & 1<<0) ? 1:0) << 4;
 
-            data_buffer[9] = ((data_payload_right[2] & 1<<4) ? 1:0) << 0 |
-                             ((data_payload_right[2] & 1<<3) ? 1:0) << 1 |
-                             ((data_payload_right[2] & 1<<2) ? 1:0) << 2 |
-                             ((data_payload_right[2] & 1<<1) ? 1:0) << 3;
+                    data_buffer[8] = ((data_payload[3] & 1<<1) ? 1:0) << 1 |
+                                     ((data_payload[3] & 1<<2) ? 1:0) << 2 |
+                                     ((data_payload[3] & 1<<3) ? 1:0) << 3 |
+                                     ((data_payload[3] & 1<<4) ? 1:0) << 4;
+                }
+                else // right-hand
+                {
+                    data_buffer[1] = ((data_payload[1] & 1<<7) ? 1:0) << 0 |
+                                     ((data_payload[1] & 1<<6) ? 1:0) << 1 |
+                                     ((data_payload[1] & 1<<5) ? 1:0) << 2 |
+                                     ((data_payload[1] & 1<<4) ? 1:0) << 3 |
+                                     ((data_payload[1] & 1<<3) ? 1:0) << 4;
+
+                    data_buffer[3] = ((data_payload[1] & 1<<2) ? 1:0) << 0 |
+                                     ((data_payload[1] & 1<<1) ? 1:0) << 1 |
+                                     ((data_payload[1] & 1<<0) ? 1:0) << 2 |
+                                     ((data_payload[2] & 1<<7) ? 1:0) << 3 |
+                                     ((data_payload[2] & 1<<6) ? 1:0) << 4;
+
+                    data_buffer[5] = ((data_payload[2] & 1<<5) ? 1:0) << 0 |
+                                     ((data_payload[2] & 1<<4) ? 1:0) << 1 |
+                                     ((data_payload[2] & 1<<3) ? 1:0) << 2 |
+                                     ((data_payload[2] & 1<<2) ? 1:0) << 3 |
+                                     ((data_payload[2] & 1<<1) ? 1:0) << 4;
+
+                    data_buffer[7] = ((data_payload[2] & 1<<0) ? 1:0) << 0 |
+                                     ((data_payload[3] & 1<<7) ? 1:0) << 1 |
+                                     ((data_payload[3] & 1<<6) ? 1:0) << 2 |
+                                     ((data_payload[3] & 1<<5) ? 1:0) << 3;
+
+                    data_buffer[9] = ((data_payload[3] & 1<<4) ? 1:0) << 0 |
+                                     ((data_payload[3] & 1<<3) ? 1:0) << 1 |
+                                     ((data_payload[3] & 1<<2) ? 1:0) << 2 |
+                                     ((data_payload[3] & 1<<1) ? 1:0) << 3;
+                }
+            }
         }
 
         // checking for a poll request from QMK
@@ -234,38 +239,4 @@ int main(void)
             right_active = 0;
         }
     }
-}
-
-
-// Callbacks not needed in this example.
-void nrf_gzll_device_tx_success(uint32_t pipe, nrf_gzll_device_tx_info_t tx_info) {}
-void nrf_gzll_device_tx_failed(uint32_t pipe, nrf_gzll_device_tx_info_t tx_info) {}
-void nrf_gzll_disabled() {}
-
-// If a data packet was received, identify half, and throw flag
-void nrf_gzll_host_rx_data_ready(uint32_t pipe, nrf_gzll_host_rx_info_t rx_info)
-{   
-    uint32_t data_payload_length = NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH;
-    
-    if (pipe == 0)
-    {
-        packet_received_left = true;
-        left_active = 0;
-        // Pop packet and write first byte of the payload to the GPIO port.
-        nrf_gzll_fetch_packet_from_rx_fifo(pipe, data_payload_left, &data_payload_length);
-    }
-    else if (pipe == 1)
-    {
-        packet_received_right = true;
-        right_active = 0;
-        // Pop packet and write first byte of the payload to the GPIO port.
-        nrf_gzll_fetch_packet_from_rx_fifo(pipe, data_payload_right, &data_payload_length);
-    }
-    
-    // not sure if required, I guess if enough packets are missed during blocking uart
-    nrf_gzll_flush_rx_fifo(pipe);
-
-    //load ACK payload into TX queue
-    ack_payload[0] =  0x55;
-    nrf_gzll_add_packet_to_tx_fifo(pipe, ack_payload, TX_PAYLOAD_LENGTH);
 }
