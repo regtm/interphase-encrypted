@@ -52,7 +52,7 @@ Plug in, or replug in the programmer after this.
 ## OpenOCD server
 The programming header on the side of the interphase keyboard, from top to bottom:
 ```
-3.3V
+3.3v
 swclck
 swdio
 gnd
@@ -90,6 +90,12 @@ cd mitosis/mitosis-keyboard-basic
 ./program.sh
 ```
 An openocd session should be running in another terminal, as this script sends commands to it.
+
+## Programming Pro Micro Receiver
+The precompiled qmk hex file can be flashed with avrdude. The path to the hex and the usb port may have to be adapted.
+```
+avrdude -p atmega32u4 -c avr109 -U flash:w:precompiled-basic-qmk.hex -P /dev/ttyACM0
+´´´
 
 
 
