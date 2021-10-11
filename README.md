@@ -95,7 +95,7 @@ An openocd session should be running in another terminal, as this script sends c
 The precompiled qmk hex file can be flashed with avrdude. The path to the hex and the usb port may have to be adapted.
 ```
 avrdude -p atmega32u4 -c avr109 -U flash:w:precompiled-basic-qmk.hex -P /dev/ttyACM0
-´´´
+```
 
 
 
