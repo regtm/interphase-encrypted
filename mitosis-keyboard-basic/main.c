@@ -1,8 +1,8 @@
 
-// #define COMPILE_RIGHT
+//#define COMPILE_RIGHT
 #define COMPILE_LEFT
 
-#include "mitosis.h"
+#include "interphase.h"
 #include "nrf_drv_config.h"
 #include "nrf_gzll.h"
 #include "nrf_gpio.h"
@@ -38,7 +38,7 @@ static volatile bool encrypting = false;
 #define ACTIVITY 500
 
 // Key buffers
-static uint32_t keys, keys_snapshot;
+static uint8_t keys[ROWS], keys_snapshot[ROWS], keys_buffer[ROWS];
 static uint32_t debounce_ticks, activity_ticks;
 static volatile bool debouncing = false;
 
@@ -57,35 +57,73 @@ static volatile uint32_t rekey_decrypt_failure = 0;
 // Setup switch pins with pullups
 static void gpio_config(void)
 {
-    nrf_gpio_cfg_sense_input(S01, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S02, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S03, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S04, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S05, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S06, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S07, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S08, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S09, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S10, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S11, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S12, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S13, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S14, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S15, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S16, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S17, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S18, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S19, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S20, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S21, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S22, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-    nrf_gpio_cfg_sense_input(S23, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
+    nrf_gpio_cfg_sense_input(C01, NRF_GPIO_PIN_PULLDOWN, NRF_GPIO_PIN_SENSE_HIGH);
+    nrf_gpio_cfg_sense_input(C02, NRF_GPIO_PIN_PULLDOWN, NRF_GPIO_PIN_SENSE_HIGH);
+    nrf_gpio_cfg_sense_input(C03, NRF_GPIO_PIN_PULLDOWN, NRF_GPIO_PIN_SENSE_HIGH);
+    nrf_gpio_cfg_sense_input(C04, NRF_GPIO_PIN_PULLDOWN, NRF_GPIO_PIN_SENSE_HIGH);
+    nrf_gpio_cfg_sense_input(C05, NRF_GPIO_PIN_PULLDOWN, NRF_GPIO_PIN_SENSE_HIGH);
+    nrf_gpio_cfg_sense_input(C06, NRF_GPIO_PIN_PULLDOWN, NRF_GPIO_PIN_SENSE_HIGH);
+    nrf_gpio_cfg_sense_input(C07, NRF_GPIO_PIN_PULLDOWN, NRF_GPIO_PIN_SENSE_HIGH);
+
+    nrf_gpio_cfg_output(R01);
+    nrf_gpio_cfg_output(R02);
+    nrf_gpio_cfg_output(R03);
+    nrf_gpio_cfg_output(R04);
+    nrf_gpio_cfg_output(R05);
 }
 
-// Return the key states, masked with valid key pins
-static uint32_t read_keys(void)
+// Return the key states of one row
+static uint8_t read_row(uint32_t row)
 {
-    return ~NRF_GPIO->IN & INPUT_MASK;
+    uint8_t buff = 0;
+    uint32_t input = 0;
+    nrf_gpio_pin_set(row);
+    input = NRF_GPIO->IN;
+    buff = (buff << 1) | ((input >> C01) & 1);
+    buff = (buff << 1) | ((input >> C02) & 1);
+    buff = (buff << 1) | ((input >> C03) & 1);
+    buff = (buff << 1) | ((input >> C04) & 1);
+    buff = (buff << 1) | ((input >> C05) & 1);
+    buff = (buff << 1) | ((input >> C06) & 1);
+    buff = (buff << 1) | ((input >> C07) & 1);
+    buff = (buff << 1);
+    nrf_gpio_pin_clear(row);
+    return buff;
+}
+
+// Return the key states
+static void read_keys(void)
+{
+    keys_buffer[0] = read_row(R01);
+    keys_buffer[1] = read_row(R02);
+    keys_buffer[2] = read_row(R03);
+    keys_buffer[3] = read_row(R04);
+    keys_buffer[4] = read_row(R05);
+    return;
+}
+
+static bool compare_keys(uint8_t* first, uint8_t* second, uint32_t size)
+{
+    for(int i=0; i < size; i++)
+    {
+        if (first[i] != second[i])
+        {
+          return false;
+        }
+    }
+    return true;
+}
+
+static bool empty_keys(void)
+{
+    for(int i=0; i < ROWS; i++)
+    {
+        if (keys_buffer[i])
+        {
+          return false;
+        }
+    }
+    return true;
 }
 
 // Assemble packet and send to receiver
@@ -99,32 +137,12 @@ static void send_data(void)
     {
         encrypting = true;
         uint8_t* data = data_payload.data;
-        data[0] = ((keys & 1<<S01) ? 1:0) << 7 | \
-                  ((keys & 1<<S02) ? 1:0) << 6 | \
-                  ((keys & 1<<S03) ? 1:0) << 5 | \
-                  ((keys & 1<<S04) ? 1:0) << 4 | \
-                  ((keys & 1<<S05) ? 1:0) << 3 | \
-                  ((keys & 1<<S06) ? 1:0) << 2 | \
-                  ((keys & 1<<S07) ? 1:0) << 1 | \
-                  ((keys & 1<<S08) ? 1:0) << 0;
+        
+        for(int i=0; i < ROWS; i++)
+        {
+            data[i] = keys[i];
+        }
 
-        data[1] = ((keys & 1<<S09) ? 1:0) << 7 | \
-                  ((keys & 1<<S10) ? 1:0) << 6 | \
-                  ((keys & 1<<S11) ? 1:0) << 5 | \
-                  ((keys & 1<<S12) ? 1:0) << 4 | \
-                  ((keys & 1<<S13) ? 1:0) << 3 | \
-                  ((keys & 1<<S14) ? 1:0) << 2 | \
-                  ((keys & 1<<S15) ? 1:0) << 1 | \
-                  ((keys & 1<<S16) ? 1:0) << 0;
-
-        data[2] = ((keys & 1<<S17) ? 1:0) << 7 | \
-                  ((keys & 1<<S18) ? 1:0) << 6 | \
-                  ((keys & 1<<S19) ? 1:0) << 5 | \
-                  ((keys & 1<<S20) ? 1:0) << 4 | \
-                  ((keys & 1<<S21) ? 1:0) << 3 | \
-                  ((keys & 1<<S22) ? 1:0) << 2 | \
-                  ((keys & 1<<S23) ? 1:0) << 1 | \
-                  0 << 0;
 
         if (mitosis_aes_ctr_encrypt(&crypto.encrypt, sizeof(data_payload.data), data_payload.data, data_payload.data))
         {
@@ -168,17 +186,22 @@ static void handler_maintenance(nrf_drv_rtc_int_type_t int_type)
 // 1000Hz debounce sampling
 static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
 {
+    read_keys();
+
     // debouncing, waits until there have been no transitions in 5ms (assuming five 1ms ticks)
     if (debouncing)
     {
         // if debouncing, check if current keystates equal to the snapshot
-        if (keys_snapshot == read_keys())
+        if (compare_keys(keys_snapshot, keys_buffer, ROWS))
         {
             // DEBOUNCE ticks of stable sampling needed before sending data
             debounce_ticks++;
             if (debounce_ticks == DEBOUNCE)
             {
-                keys = keys_snapshot;
+                for(int j=0; j < ROWS; j++)
+                {
+                    keys[j] = keys_snapshot[j];
+                }
                 send_data();
             }
         }
@@ -192,23 +215,32 @@ static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
     {
         // if the keystate is different from the last data
         // sent to the receiver, start debouncing
-        if (keys != read_keys())
+        if (!compare_keys(keys, keys_buffer, ROWS))
         {
-            keys_snapshot = read_keys();
+            for(int k=0; k < ROWS; k++)
+            {
+                keys_snapshot[k] = keys_buffer[k];
+            }
             debouncing = true;
             debounce_ticks = 0;
         }
     }
 
     // looking for 500 ticks of no keys pressed, to go back to deep sleep
-    if (read_keys() == 0)
+    if (empty_keys())
     {
         activity_ticks++;
         if (activity_ticks > ACTIVITY)
         {
             nrf_drv_rtc_disable(&rtc_maint);
             nrf_drv_rtc_disable(&rtc_deb);
+            nrf_gpio_pin_set(R01);
+            nrf_gpio_pin_set(R02);
+            nrf_gpio_pin_set(R03);
+            nrf_gpio_pin_set(R04);
+            nrf_gpio_pin_set(R05);
         }
+
     }
     else
     {
@@ -301,8 +333,15 @@ void GPIOTE_IRQHandler(void)
         nrf_drv_rtc_enable(&rtc_maint);
         nrf_drv_rtc_enable(&rtc_deb);
 
-        debouncing = false;
-        debounce_ticks = 0;
+        nrf_gpio_pin_clear(R01);
+        nrf_gpio_pin_clear(R02);
+        nrf_gpio_pin_clear(R03);
+        nrf_gpio_pin_clear(R04);
+        nrf_gpio_pin_clear(R05);
+
+        //TODO: proper interrupt handling to avoid fake interrupts because of matrix scanning
+        //debouncing = false;
+        //debounce_ticks = 0;
         activity_ticks = 0;
     }
 }

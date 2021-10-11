@@ -1,9 +1,13 @@
-# Mitosis Keyboard Firmware
-Firmware for Nordic MCUs used in the Mitosis Keyboard, contains precompiled .hex files, as well as sources buildable with the Nordic SDK
+# Interphase Keyboard
+The [interphase](https://github.com/Durburz/interphase) keyboard is an iso layout adaptation of reversebias' [mitosis](https://github.com/reversebias/mitosis-hardware) keyboard by durburz.
+
+# Interphase Encrypted Keyboard Firmware
+Firmware for Nordic MCUs used in the Interphase Keyboard, contains precompiled .hex files, as well as sources buildable with the Nordic SDK.
+This firmware adapts rossica's [crypto](https://github.com/rossica/mitosis/tree/feature-crypto) firmware for the original mitosis for the use with the interphase keyboard.
 
 ## Install dependencies
 
-Tested on Ubuntu 16.04.2, but should be able to find alternatives on all distros. 
+Tested on Ubuntu 20.04.3, but should be able to find alternatives on all distros. 
 
 ```
 sudo apt install openocd gcc-arm-none-eabi
@@ -46,12 +50,12 @@ sudo cp mitosis/49-stlinkv2.rules /etc/udev/rules.d/
 Plug in, or replug in the programmer after this.
 
 ## OpenOCD server
-The programming header on the side of the keyboard, from top to bottom:
+The programming header on the side of the interphase keyboard, from top to bottom:
 ```
-SWCLK
-SWDIO
-GND
 3.3V
+swclck
+swdio
+gnd
 ```
 It's best to remove the battery during long sessions of debugging, as charging non-rechargeable lithium batteries isn't recommended.
 

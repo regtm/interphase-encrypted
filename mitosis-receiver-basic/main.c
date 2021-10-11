@@ -27,8 +27,11 @@
 #define INACTIVE 10000
 
 // Binary printing
-#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c"
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)  \
+  (byte & 0x80 ? '#' : '.'), \
+  (byte & 0x40 ? '#' : '.'), \
+  (byte & 0x20 ? '#' : '.'), \
   (byte & 0x10 ? '#' : '.'), \
   (byte & 0x08 ? '#' : '.'), \
   (byte & 0x04 ? '#' : '.'), \
@@ -127,66 +130,90 @@ void mitosis_uart_handler(app_uart_evt_t * p_event)
         {
             left_stats.packet_received = false;
 
-            data_buffer[0] = ((data_payload_left[0] & 1<<3) ? 1:0) << 0 |
-                             ((data_payload_left[0] & 1<<4) ? 1:0) << 1 |
-                             ((data_payload_left[0] & 1<<5) ? 1:0) << 2 |
-                             ((data_payload_left[0] & 1<<6) ? 1:0) << 3 |
-                             ((data_payload_left[0] & 1<<7) ? 1:0) << 4;
+            data_buffer[0] =  ((data_payload_left[0] & 1<<7) ? 1:0) << 0 |
+                              ((data_payload_left[0] & 1<<6) ? 1:0) << 1 |
+                              ((data_payload_left[0] & 1<<5) ? 1:0) << 2 |
+                              ((data_payload_left[0] & 1<<4) ? 1:0) << 3 |
+                              ((data_payload_left[0] & 1<<3) ? 1:0) << 4 |
+                              ((data_payload_left[0] & 1<<2) ? 1:0) << 5 |
+                              ((data_payload_left[0] & 1<<1) ? 1:0) << 6;
 
-            data_buffer[2] = ((data_payload_left[1] & 1<<6) ? 1:0) << 0 |
-                             ((data_payload_left[1] & 1<<7) ? 1:0) << 1 |
-                             ((data_payload_left[0] & 1<<0) ? 1:0) << 2 |
-                             ((data_payload_left[0] & 1<<1) ? 1:0) << 3 |
-                             ((data_payload_left[0] & 1<<2) ? 1:0) << 4;
+            data_buffer[2] =  ((data_payload_left[1] & 1<<7) ? 1:0) << 0 |
+                              ((data_payload_left[1] & 1<<6) ? 1:0) << 1 |
+                              ((data_payload_left[1] & 1<<5) ? 1:0) << 2 |
+                              ((data_payload_left[1] & 1<<4) ? 1:0) << 3 |
+                              ((data_payload_left[1] & 1<<3) ? 1:0) << 4 |
+                              ((data_payload_left[1] & 1<<2) ? 1:0) << 5 |
+                              ((data_payload_left[1] & 1<<1) ? 1:0) << 6;
 
-            data_buffer[4] = ((data_payload_left[1] & 1<<1) ? 1:0) << 0 |
-                             ((data_payload_left[1] & 1<<2) ? 1:0) << 1 |
-                             ((data_payload_left[1] & 1<<3) ? 1:0) << 2 |
-                             ((data_payload_left[1] & 1<<4) ? 1:0) << 3 |
-                             ((data_payload_left[1] & 1<<5) ? 1:0) << 4;
+            data_buffer[4] =  ((data_payload_left[2] & 1<<7) ? 1:0) << 0 |
+                              ((data_payload_left[2] & 1<<6) ? 1:0) << 1 |
+                              ((data_payload_left[2] & 1<<5) ? 1:0) << 2 |
+                              ((data_payload_left[2] & 1<<4) ? 1:0) << 3 |
+                              ((data_payload_left[2] & 1<<3) ? 1:0) << 4 |
+                              ((data_payload_left[2] & 1<<2) ? 1:0) << 5 |
+                              ((data_payload_left[2] & 1<<1) ? 1:0) << 6;
 
-            data_buffer[6] = ((data_payload_left[2] & 1<<5) ? 1:0) << 1 |
-                             ((data_payload_left[2] & 1<<6) ? 1:0) << 2 |
-                             ((data_payload_left[2] & 1<<7) ? 1:0) << 3 |
-                             ((data_payload_left[1] & 1<<0) ? 1:0) << 4;
+            data_buffer[6] =  ((data_payload_left[3] & 1<<7) ? 1:0) << 0 |
+                              ((data_payload_left[3] & 1<<6) ? 1:0) << 1 |
+                              ((data_payload_left[3] & 1<<5) ? 1:0) << 2 |
+                              ((data_payload_left[3] & 1<<4) ? 1:0) << 3 |
+                              ((data_payload_left[3] & 1<<3) ? 1:0) << 4 |
+                              ((data_payload_left[3] & 1<<2) ? 1:0) << 5 |
+                              ((data_payload_left[3] & 1<<1) ? 1:0) << 6;
 
-            data_buffer[8] = ((data_payload_left[2] & 1<<1) ? 1:0) << 1 |
-                             ((data_payload_left[2] & 1<<2) ? 1:0) << 2 |
-                             ((data_payload_left[2] & 1<<3) ? 1:0) << 3 |
-                             ((data_payload_left[2] & 1<<4) ? 1:0) << 4;
+            data_buffer[8] =  ((data_payload_left[4] & 1<<7) ? 1:0) << 0 |
+                              ((data_payload_left[4] & 1<<6) ? 1:0) << 1 |
+                              ((data_payload_left[4] & 1<<5) ? 1:0) << 2 |
+                              ((data_payload_left[4] & 1<<4) ? 1:0) << 3 |
+                              ((data_payload_left[4] & 1<<3) ? 1:0) << 4 |
+                              ((data_payload_left[4] & 1<<2) ? 1:0) << 5 |
+                              ((data_payload_left[4] & 1<<1) ? 1:0) << 6;
         }
 
         if (right_stats.packet_received)
         {
             right_stats.packet_received = false;
 
-            data_buffer[1] = ((data_payload_right[0] & 1<<7) ? 1:0) << 0 |
-                             ((data_payload_right[0] & 1<<6) ? 1:0) << 1 |
-                             ((data_payload_right[0] & 1<<5) ? 1:0) << 2 |
-                             ((data_payload_right[0] & 1<<4) ? 1:0) << 3 |
-                             ((data_payload_right[0] & 1<<3) ? 1:0) << 4;
+            data_buffer[1] =  ((data_payload_right[0] & 1<<7) ? 1:0) << 0 |
+                              ((data_payload_right[0] & 1<<6) ? 1:0) << 1 |
+                              ((data_payload_right[0] & 1<<5) ? 1:0) << 2 |
+                              ((data_payload_right[0] & 1<<4) ? 1:0) << 3 |
+                              ((data_payload_right[0] & 1<<3) ? 1:0) << 4 |
+                              ((data_payload_right[0] & 1<<2) ? 1:0) << 5 |
+                              ((data_payload_right[0] & 1<<1) ? 1:0) << 6;
 
-            data_buffer[3] = ((data_payload_right[0] & 1<<2) ? 1:0) << 0 |
-                             ((data_payload_right[0] & 1<<1) ? 1:0) << 1 |
-                             ((data_payload_right[0] & 1<<0) ? 1:0) << 2 |
-                             ((data_payload_right[1] & 1<<7) ? 1:0) << 3 |
-                             ((data_payload_right[1] & 1<<6) ? 1:0) << 4;
+            data_buffer[3] =  ((data_payload_right[1] & 1<<7) ? 1:0) << 0 |
+                              ((data_payload_right[1] & 1<<6) ? 1:0) << 1 |
+                              ((data_payload_right[1] & 1<<5) ? 1:0) << 2 |
+                              ((data_payload_right[1] & 1<<4) ? 1:0) << 3 |
+                              ((data_payload_right[1] & 1<<3) ? 1:0) << 4 |
+                              ((data_payload_right[1] & 1<<2) ? 1:0) << 5 |
+                              ((data_payload_right[1] & 1<<1) ? 1:0) << 6;
 
-            data_buffer[5] = ((data_payload_right[1] & 1<<5) ? 1:0) << 0 |
-                             ((data_payload_right[1] & 1<<4) ? 1:0) << 1 |
-                             ((data_payload_right[1] & 1<<3) ? 1:0) << 2 |
-                             ((data_payload_right[1] & 1<<2) ? 1:0) << 3 |
-                             ((data_payload_right[1] & 1<<1) ? 1:0) << 4;
+            data_buffer[5] =  ((data_payload_right[2] & 1<<7) ? 1:0) << 0 |
+                              ((data_payload_right[2] & 1<<6) ? 1:0) << 1 |
+                              ((data_payload_right[2] & 1<<5) ? 1:0) << 2 |
+                              ((data_payload_right[2] & 1<<4) ? 1:0) << 3 |
+                              ((data_payload_right[2] & 1<<3) ? 1:0) << 4 |
+                              ((data_payload_right[2] & 1<<2) ? 1:0) << 5 |
+                              ((data_payload_right[2] & 1<<1) ? 1:0) << 6;
 
-            data_buffer[7] = ((data_payload_right[1] & 1<<0) ? 1:0) << 0 |
-                             ((data_payload_right[2] & 1<<7) ? 1:0) << 1 |
-                             ((data_payload_right[2] & 1<<6) ? 1:0) << 2 |
-                             ((data_payload_right[2] & 1<<5) ? 1:0) << 3;
+            data_buffer[7] =  ((data_payload_right[3] & 1<<7) ? 1:0) << 0 |
+                              ((data_payload_right[3] & 1<<6) ? 1:0) << 1 |
+                              ((data_payload_right[3] & 1<<5) ? 1:0) << 2 |
+                              ((data_payload_right[3] & 1<<4) ? 1:0) << 3 |
+                              ((data_payload_right[3] & 1<<3) ? 1:0) << 4 |
+                              ((data_payload_right[3] & 1<<2) ? 1:0) << 5 |
+                              ((data_payload_right[3] & 1<<1) ? 1:0) << 6;
 
-            data_buffer[9] = ((data_payload_right[2] & 1<<4) ? 1:0) << 0 |
-                             ((data_payload_right[2] & 1<<3) ? 1:0) << 1 |
-                             ((data_payload_right[2] & 1<<2) ? 1:0) << 2 |
-                             ((data_payload_right[2] & 1<<1) ? 1:0) << 3;
+            data_buffer[9] =  ((data_payload_right[4] & 1<<7) ? 1:0) << 0 |
+                              ((data_payload_right[4] & 1<<6) ? 1:0) << 1 |
+                              ((data_payload_right[4] & 1<<5) ? 1:0) << 2 |
+                              ((data_payload_right[4] & 1<<4) ? 1:0) << 3 |
+                              ((data_payload_right[4] & 1<<3) ? 1:0) << 4 |
+                              ((data_payload_right[4] & 1<<2) ? 1:0) << 5 |
+                              ((data_payload_right[4] & 1<<1) ? 1:0) << 6;
         }
         if (p_event->data.value == 's')
         {
