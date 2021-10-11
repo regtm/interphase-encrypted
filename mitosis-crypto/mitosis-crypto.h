@@ -50,11 +50,11 @@ typedef struct _mitosis_crypto_context_t {
 typedef struct _mitosis_crypto_data_payload_t {
     union {
         struct {
-            uint8_t  data[5];   // interphase has 5 data bytes compared to the 3 bytes for the mitosis
+            uint8_t data[5];   // interphase has 5 data bytes compared to the 3 bytes for the mitosis
             uint8_t key_id;
             uint32_t counter;   // 5 (data) + 1 (id) + 2 (pad) + 4 (counter)
         };
-        uint8_t payload[8];
+        uint8_t payload[12];
     };
     uint8_t  mac[16];
 } mitosis_crypto_data_payload_t;

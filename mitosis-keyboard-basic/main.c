@@ -22,7 +22,7 @@ const nrf_drv_rtc_t rtc_deb = NRF_DRV_RTC_INSTANCE(1); /**< Declaring an instanc
 
 
 // Define payload length
-#define TX_PAYLOAD_LENGTH sizeof(mitosis_crypto_data_payload_t) ///< 24 byte payload length when transmitting
+#define TX_PAYLOAD_LENGTH sizeof(mitosis_crypto_data_payload_t) ///< 28 byte payload length when transmitting
 
 // Data and acknowledgement payloads
 static mitosis_crypto_data_payload_t data_payload;  ///< Payload to send to Host.
@@ -270,8 +270,8 @@ static void rtc_config(void)
     nrf_drv_rtc_tick_enable(&rtc_deb,true);
 
     //Power on RTC instance
-    //nrf_drv_rtc_enable(&rtc_maint);
-    //nrf_drv_rtc_enable(&rtc_deb);
+    nrf_drv_rtc_enable(&rtc_maint);
+    nrf_drv_rtc_enable(&rtc_deb);
 }
 
 int main()
@@ -339,7 +339,6 @@ void GPIOTE_IRQHandler(void)
         nrf_gpio_pin_clear(R04);
         nrf_gpio_pin_clear(R05);
 
-        //TODO: proper interrupt handling to avoid fake interrupts because of matrix scanning
         //debouncing = false;
         //debounce_ticks = 0;
         activity_ticks = 0;
