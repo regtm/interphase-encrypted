@@ -3,3 +3,9 @@ interphase
 swclck
 swdio
 gnd
+
+mitosis receiver
+swclk
+swdio
+gnd
+3.3v
