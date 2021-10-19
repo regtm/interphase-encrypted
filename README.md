@@ -5,6 +5,8 @@ The [interphase](https://github.com/Durburz/interphase) keyboard is an iso layou
 Firmware for Nordic MCUs used in the Interphase Keyboard, contains precompiled .hex files, as well as sources buildable with the Nordic SDK.
 This firmware adapts rossica's [crypto](https://github.com/rossica/mitosis/tree/feature-crypto) firmware for the original mitosis for the use with the interphase keyboard.
 
+**Compile the keyboard and receiver firmware yourself after setting your seed in mitosis-crypto/mitosis-crypto.h!**
+
 ## Install dependencies
 
 Tested on Ubuntu 20.04.3, but should be able to find alternatives on all distros. 
